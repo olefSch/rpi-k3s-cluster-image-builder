@@ -1,0 +1,54 @@
+name: Build K3s RPi Image
+
+on:
+  workflow_dispatch:
+    inputs:
+      node_role:
+        description: "Role of the node"
+        required: true
+        default: "worker"
+        type: choice
+        options:
+          - master-init
+          - master-join
+          - worker
+      master_ip:
+        description:
+          "IP of the Master-Init Node (Required for master-join and worker)"
+        required: true
+        default: "192.168.1.100"
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Install Build Dependencies
+        run:
+          sudo apt-get update && sudo apt-get install -y gettext-base xz-utils
+          kpartx
+
+      - name: Inject Secrets and Values into Templates
+        env:
+          NODE_ROLE: ${{ inputs.node_role }}
+          MASTER_IP: ${{ inputs.master_ip }}
+          VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
+          VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
+          VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
+          SSH_PUBLIC_KEY: ${{ secrets.SSH_PUBLIC_KEY }}
+          TF_REPO_URL: ${{ secrets.TF_REPO_URL }}
+        run: |
+          envsubst < cloud-init/user-data.yaml.tftpl > cloud-init/user-data
+          envsubst < manifests/argocd-app.yaml.tftpl > manifests/argocd-app.yaml
+
+      - name: Build Image
+        run: sudo bash scripts/build-image.sh
+
+      - name: Upload Private Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: k3s-${{ inputs.node_role }}-image
+          path: workspace/ubuntu-custom.img.xz
+          retention-days: 0

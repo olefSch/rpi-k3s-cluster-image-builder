@@ -25,6 +25,10 @@ on:
           "IP of the Master-Init Node (Required for master-join and worker)"
         required: true
         default: "192.168.1.100"
+      router_gateway_ip:
+        description: "The home router's gateway ip"
+        required: true
+        default: "192.168.1.1"
 
 jobs:
   build:
@@ -43,6 +47,7 @@ jobs:
           NODE_ROLE: ${{ inputs.node_role }}
           NODE_HOSTNAME: ${{ inputs.node_hostname }}
           NODE_IP: ${{ inputs.node_ip }}
+          ROUTER_GATEWAY_IP: ${{ inputs.router_gateway_ip }}
           MASTER_IP: ${{ inputs.master_ip }}
           VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
           VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}

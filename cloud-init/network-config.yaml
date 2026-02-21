@@ -1,0 +1,14 @@
+version: 2
+ethernets:
+  eth0:
+    dhcp4: false
+    dhcp6: false
+    addresses:
+      - ${NODE_IP}/24
+    routes:
+      - to: default
+        via: ${ROUTER_GATEWAY_IP}
+    nameservers:
+      addresses:
+        - 1.1.1.1
+        - 8.8.8.8

@@ -1,0 +1,40 @@
+# repo related
+workspace/
+
+*.img
+*.img.xz
+*.iso
+*.tar.gz
+*.zip
+
+# generated files
+cloud-init/user-data
+manifests/argocd-app.yaml
+
+# keys
+.env
+.env.local
+*.pem
+*.key
+*.crt
+
+# only vscode or vim
+.idea/
+*.swp
+*.swo
+*~
+
+# os stuff
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# for pre-commits and small python scritps
+.cache/
+__pycache__/
+.venv/
+venv/

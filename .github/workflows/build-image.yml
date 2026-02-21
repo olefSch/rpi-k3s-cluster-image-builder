@@ -12,6 +12,14 @@ on:
           - master-init
           - master-join
           - worker
+      node_hostname:
+        description: "Hostname for this specific Pi (e.g., k3s-master-02)"
+        required: true
+        default: "k3s-master-01"
+      node_ip:
+        description: "Static IP for THIS specific Pi (e.g., 192.168.1.101)"
+        required: true
+        default: "192.168.1.101"
       master_ip:
         description:
           "IP of the Master-Init Node (Required for master-join and worker)"
@@ -26,13 +34,15 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Install Build Dependencies
-        run:
-          sudo apt-get update && sudo apt-get install -y gettext-base xz-utils
-          kpartx
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gettext-base xz-utils kpartx
 
       - name: Inject Secrets and Values into Templates
         env:
           NODE_ROLE: ${{ inputs.node_role }}
+          NODE_HOSTNAME: ${{ inputs.node_hostname }}
+          NODE_IP: ${{ inputs.node_ip }}
           MASTER_IP: ${{ inputs.master_ip }}
           VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
           VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
@@ -41,6 +51,7 @@ jobs:
           TF_REPO_URL: ${{ secrets.TF_REPO_URL }}
         run: |
           envsubst < cloud-init/user-data.yaml.tftpl > cloud-init/user-data
+          envsubst < cloud-init/network-config.yaml.tftpl > cloud-init/network-config.yaml
           envsubst < manifests/argocd-app.yaml.tftpl > manifests/argocd-app.yaml
 
       - name: Build Image
@@ -49,6 +60,7 @@ jobs:
       - name: Upload Private Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: k3s-${{ inputs.node_role }}-image
+          # prettier-ignore
+          name: "k3s-${{ inputs.node_role }}-${{ inputs.node_hostname }}-${{inputs.node_ip }}"
           path: workspace/ubuntu-custom.img.xz
           retention-days: 0

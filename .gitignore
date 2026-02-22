@@ -1,5 +1,7 @@
 # repo related
 workspace/
+cloud-init/network-config.yaml
+manifests/kube-vip-daemonset.yaml
 
 *.img
 *.img.xz

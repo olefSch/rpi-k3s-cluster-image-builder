@@ -1,7 +1,5 @@
 # repo related
 workspace/
-cloud-init/network-config.yaml
-manifests/kube-vip-daemonset.yaml
 
 *.img
 *.img.xz
@@ -10,8 +8,10 @@ manifests/kube-vip-daemonset.yaml
 *.zip
 
 # generated files
+cloud-init/network-config.yaml
 cloud-init/user-data
 manifests/argocd-app.yaml
+manifests/kube-vip-daemonset.yaml
 
 # keys
 .env

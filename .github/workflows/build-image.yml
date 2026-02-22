@@ -29,6 +29,10 @@ on:
         description: "The home router's gateway ip"
         required: true
         default: "192.168.1.1"
+      vip_ip:
+        description: "Floating Virtual IP for the HA Cluster"
+        required: true
+        default: "192.168.1.99"
 
 jobs:
   build:
@@ -49,6 +53,7 @@ jobs:
           NODE_IP: ${{ inputs.node_ip }}
           ROUTER_GATEWAY_IP: ${{ inputs.router_gateway_ip }}
           MASTER_IP: ${{ inputs.master_ip }}
+          VIP_IP: ${{ inputs.vip_ip }}
           VAULT_ADDR: ${{ secrets.VAULT_ADDR }}
           VAULT_ROLE_ID: ${{ secrets.VAULT_ROLE_ID }}
           VAULT_SECRET_ID: ${{ secrets.VAULT_SECRET_ID }}
@@ -58,6 +63,7 @@ jobs:
           envsubst < cloud-init/user-data.yaml.tftpl > cloud-init/user-data
           envsubst < cloud-init/network-config.yaml.tftpl > cloud-init/network-config.yaml
           envsubst < manifests/argocd-app.yaml.tftpl > manifests/argocd-app.yaml
+          envsubst < manifests/kube-vip-daemonset.yaml.tftpl > manifests/kube-vip-daemonset.yaml
 
       - name: Build Image
         run: sudo bash scripts/build-image.sh

@@ -1,0 +1,99 @@
+hostname: ${NODE_HOSTNAME}
+manage_etc_hosts: true
+
+users:
+  - name: pi
+    groups: sudo
+    shell: /bin/bash
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    ssh_authorized_keys:
+      - ${SSH_PUBLIC_KEY}
+
+write_files:
+  - path: /root/vault-auth/role-id
+    permissions: "0600"
+    owner: root:root
+    content: |
+      ${VAULT_ROLE_ID}
+  - path: /root/vault-auth/secret-id
+    permissions: "0600"
+    owner: root:root
+    content: |
+      ${VAULT_SECRET_ID}
+  - path: /root/vault-auth/vault-addr
+    permissions: "0600"
+    owner: root:root
+    content: |
+      ${VAULT_ADDR}
+
+runcmd:
+  # dependencies
+  - |
+    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
+    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
+    apt-get update && apt-get install -y vault jq parted
+
+  # hashicorp vault auth
+  - |
+    export VAULT_ADDR=$(cat /root/vault-auth/vault-addr)
+    VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id=$(cat /root/vault-auth/role-id) secret_id=$(cat /root/vault-auth/secret-id))
+    export K3S_TOKEN=$(VAULT_TOKEN=$VAULT_TOKEN vault kv get -field=token secret/k3s/cluster)
+
+  # prep ssd
+  - |
+    DISK="/dev/sda"
+    PARTITION="/dev/sda1"
+    MOUNT_POINT="/var/lib/rancher/k3s"
+
+    echo "Checking for SSD at $DISK..."
+    if lsblk $DISK >/dev/null 2>&1; then
+      if ! blkid $PARTITION >/dev/null 2>&1; then
+        echo "No filesystem found on $PARTITION. Wiping and formatting..."
+        wipefs -a $DISK
+        parted -s $DISK mklabel gpt
+        parted -s $DISK mkpart primary ext4 0% 100%
+        sleep 3
+        mkfs.ext4 -F -L K3SDATA $PARTITION
+      else
+        echo "Filesystem already exists on $PARTITION. Skipping format."
+      fi
+
+      echo "Mounting SSD to $MOUNT_POINT..."
+      mkdir -p $MOUNT_POINT
+      if ! grep -q "$MOUNT_POINT" /etc/fstab; then
+        echo "LABEL=K3SDATA $MOUNT_POINT ext4 defaults,noatime 0 2" >> /etc/fstab
+      fi
+      mount -a
+    else
+      echo "WARNING: No SSD detected at $DISK. K3s will use the SD card."
+    fi
+
+  # auto deploy manifests
+  - |
+    if [ "${NODE_ROLE}" = "master-init" ]; then
+      echo "Setting up ArgoCD GitOps manifests..."
+      mkdir -p /var/lib/rancher/k3s/server/manifests/
+      cp /boot/firmware/k3s-manifests/argocd-helm.yaml /var/lib/rancher/k3s/server/manifests/
+      cp /boot/firmware/k3s-manifests/argocd-app.yaml /var/lib/rancher/k3s/server/manifests/
+      # cp /boot/firmware/k3s-manifests/kube-vip-daemonset.yaml /var/lib/rancher/k3s/server/manifests/
+    fi
+
+  # install k3s
+  - |
+    if [ "${NODE_ROLE}" = "master-init" ]; then
+      echo "Initializing new HA control plane..."
+      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - server --cluster-init
+    elif [ "${NODE_ROLE}" = "master-join" ]; then
+      echo "Joining existing HA control plane..."
+      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - server --server https://${MASTER_IP}:6443
+    elif [ "${NODE_ROLE}" = "worker" ]; then
+      echo "Joining as worker node..."
+      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - agent --server https://${MASTER_IP}:6443
+    else
+      echo "ERROR: Unknown NODE_ROLE ${NODE_ROLE}"
+      exit 1
+    fi
+
+  # cleanup
+  - |
+    rm -rf /root/vault-auth

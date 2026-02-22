@@ -30,3 +30,14 @@ build-locally:
         && envsubst < manifests/kube-vip-daemonset.yaml.tftpl > manifests/kube-vip-daemonset.yaml \
         && echo 'Running build script...' \
         && bash scripts/build-image.sh"
+
+test-pipeline:
+    @echo "Running GitHub Action via act (Requires sudo for Docker privileged mode)..."
+    act workflow_dispatch \
+        --container-architecture linux/amd64 \
+        --container-options "--privileged" \
+        --secret-file .secrets \
+        --input node_role=master-init \
+        --input node_hostname=k3s-act-test \
+        --input node_ip=192.168.1.100 \
+        --input vip_ip=192.168.1.99

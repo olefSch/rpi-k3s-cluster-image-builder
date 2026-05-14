@@ -10,10 +10,10 @@ clean:
     @echo "Lets clean it up!! :)"
     rm -rf workspace/
     rm -rf cloud-init/network-config.yaml
-    rm -rf cloud-init/user-data.yaml
+    rm -rf cloud-init/user-data
     rm -rf manifests/argocd-app.yaml
     rm -rf manifests/kube-vip-daemonset.yaml
-    @echo "Cleanded ..."
+    @echo "Cleaned ..."
 
 build-locally:
     @echo "Spinning up a privileged Linux container to build the image..."

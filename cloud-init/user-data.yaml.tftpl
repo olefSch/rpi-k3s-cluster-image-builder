@@ -9,35 +9,10 @@ users:
     ssh_authorized_keys:
       - ${SSH_PUBLIC_KEY}
 
-write_files:
-  - path: /root/vault-auth/role-id
-    permissions: "0600"
-    owner: root:root
-    content: |
-      ${VAULT_ROLE_ID}
-  - path: /root/vault-auth/secret-id
-    permissions: "0600"
-    owner: root:root
-    content: |
-      ${VAULT_SECRET_ID}
-  - path: /root/vault-auth/vault-addr
-    permissions: "0600"
-    owner: root:root
-    content: |
-      ${VAULT_ADDR}
-
 runcmd:
   # dependencies
   - |
-    curl -fsSL https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
-    echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/hashicorp-archive-keyring.gpg] https://apt.releases.hashicorp.com $(lsb_release -cs) main" | sudo tee /etc/apt/sources.list.d/hashicorp.list
-    apt-get update && apt-get install -y vault jq parted
-
-  # hashicorp vault auth
-  - |
-    export VAULT_ADDR=$(cat /root/vault-auth/vault-addr)
-    VAULT_TOKEN=$(vault write -field=token auth/approle/login role_id=$(cat /root/vault-auth/role-id) secret_id=$(cat /root/vault-auth/secret-id))
-    export K3S_TOKEN=$(VAULT_TOKEN=$VAULT_TOKEN vault kv get -field=token secret/k3s/cluster)
+    apt-get update && apt-get install -y parted
 
   # prep ssd
   - |
@@ -82,18 +57,14 @@ runcmd:
   - |
     if [ "${NODE_ROLE}" = "master-init" ]; then
       echo "Initializing new HA control plane..."
-      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - server --cluster-init --tls-san ${VIP_IP}
+      curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - server --cluster-init --tls-san ${VIP_IP}
     elif [ "${NODE_ROLE}" = "master-join" ]; then
       echo "Joining existing HA control plane..."
-      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - server --server https://${VIP_IP}:6443
+      curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - server --server https://${VIP_IP}:6443
     elif [ "${NODE_ROLE}" = "worker" ]; then
       echo "Joining as worker node..."
-      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - agent --server https://${VIP_IP}:6443
+      curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - agent --server https://${VIP_IP}:6443
     else
       echo "ERROR: Unknown NODE_ROLE ${NODE_ROLE}"
       exit 1
     fi
-
-  # cleanup
-  - |
-    rm -rf /root/vault-auth

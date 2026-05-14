@@ -9,7 +9,6 @@ production-ready Kubernetes edge nodes on Raspberry Pi hardware._
 
 ## 🛠️ Build with
 
-![HashiCorpVault](https://img.shields.io/badge/-HashiCorp-000000?style=for-the-badge&logo=hashicorp&logoColor=white)
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![K3S](https://img.shields.io/badge/-K3s-FFC61C?style=for-the-badge&logo=k3s&logoColor=white)
 ![argo_cd](https://img.shields.io/badge/-Argo-EF7B4D?style=for-the-badge&logo=argo&logoColor=white)
@@ -35,17 +34,18 @@ cluster.**
 
 - **Zero-Touch Provisioning:** Bakes cloud-init directly into the boot
   partition.
-- **Hardware Optimized:** Automatically patches the Ubuntu kernel to enable
-  cgroups (required for K3s on RPi) and detects, formats, and mounts external
-  USB 3.0 SSDs for etcd/container storage.
-- **Secure Secret Injection:** Nodes authenticate with HashiCorp Vault via
-  AppRole on first boot to fetch the sensitive K3s cluster token, then wipe the
-  credentials from disk.
-- **High Availability (HA):** Deploys kube-vip to provide a resilient, floating
-  Control Plane IP address via ARP broadcast.
+- **Hardware Optimized (SSD Native):** Automatically patches the Ubuntu kernel
+  to enable cgroups (required for K3s on RPi). Designed for native USB 3.0 SSD
+  booting—Ubuntu automatically expands the root partition on first boot to
+  utilize the full drive.
+- **Offline Bootstrapping:** Injects the `K3S_TOKEN` directly at build time,
+  eliminating external dependencies during the initial boot. Nodes can securely
+  form the cluster completely offline.
+- **High Availability (HA):** Deploys `kube-vip` (with leader election) to
+  provide a resilient, floating Control Plane IP address via ARP broadcast.
 - **GitOps Native:** Pre-loads ArgoCD manifests so the cluster immediately
-  begins syncing workloads from your Git repository the moment the API server
-  goes live.
+  begins syncing Day-2 workloads (like Vault External Secrets and Ingress) from
+  your Git repository the moment the API server goes live.
 
 ## **🧰 Tech Stack**
 
@@ -53,27 +53,27 @@ cluster.**
 | :-------------- | :----------------- | :--------------------------------------------------- |
 | **Base OS**     | Ubuntu 24.04 LTS   | Preinstalled ARM64 Server Image for Raspberry Pi     |
 | **Kubernetes**  | K3s                | Lightweight, edge-optimized Kubernetes               |
-| **Secrets**     | HashiCorp Vault    | AppRole dynamic authentication for cluster tokens    |
+| **Secrets**     | Build-Time Env     | Direct `K3S_TOKEN` injection for offline clustering  |
 | **GitOps**      | ArgoCD             | App-of-Apps cluster workload bootstrapping           |
 | **Networking**  | kube-vip & Netplan | Static IP injection and HA Floating Control Plane IP |
 | **Task Runner** | Just               | Modern command runner for local builds and linting   |
 
 ## **📂 Repository Structure**
 
-```
+```text
 ├── .github/workflows/
-│ └── build-image.yaml # CI/CD pipeline for generating .img artifacts
+│ └── build-image.yaml               # CI/CD pipeline for generating .img artifacts
 ├── cloud-init/
-│ ├── network-config.yaml.tftpl # Netplan static IP configuration template
-│ └── user-data.yaml.tftpl # Core bootstrapping & Vault auth logic
+│ ├── network-config.yaml.tftpl      # Netplan static IP configuration template
+│ └── user-data.yaml.tftpl           # Core bootstrapping & HA cluster joining logic
 ├── manifests/
-│ ├── argocd-app.yaml.tftpl # GitOps Root Application
-│ ├── argocd-helm.yaml # ArgoCD K3s HelmChart CRD
-│ └── kube-vip-daemonset.yaml.tftpl # HA Floating IP configuration
+│ ├── argocd-app.yaml.tftpl          # GitOps Root Application
+│ ├── argocd-helm.yaml               # ArgoCD K3s HelmChart CRD
+│ └── kube-vip-daemonset.yaml.tftpl  # HA Floating IP configuration
 ├── scripts/
-│ └── build-image.sh # Loopback mounting and OS injection script
-├── .pre-commit-config.yaml # Git hook configurations (yamllint, etc.)
-├── justfile # Local developer commands
+│ └── build-image.sh                 # Loopback mounting and OS injection script
+├── .pre-commit-config.yaml          # Git hook configurations (yamllint, etc.)
+├── justfile                         # Local developer commands
 └── README.md
 ```
 
@@ -99,17 +99,14 @@ NODE_ROLE=master-init
 NODE_HOSTNAME=k3s-master-01
 NODE_IP=192.168.1.100
 VIP_IP=192.168.1.99
-MASTER_IP=192.168.1.99
-VAULT_ADDR=https://vault.yourdomain.com
-VAULT_ROLE_ID=your-local-test-role
-VAULT_SECRET_ID=your-local-test-secret
+K3S_TOKEN=your-secure-k3s-cluster-token
 SSH_PUBLIC_KEY=ssh-ed25519 AAAAC3... user@local
 TF_REPO_URL=https://github.com/your-org/your-gitops-repo.git
 ```
 
 ### **3\. Available Commands**
 
-Run just in your terminal to see the available commands:
+Run `just` in your terminal to see the available commands:
 
 ```
 # Lint all YAML and scripts before committing
@@ -125,50 +122,51 @@ just clean
 
 ## **☁️ CI/CD Pipeline (GitHub Actions)**
 
-This repository includes a workflow_dispatch GitHub Action. You can trigger
+This repository includes a `workflow_dispatch` GitHub Action. You can trigger
 image builds directly from the GitHub UI.
 
-### **Required GitHub Secrets**
+### Required GitHub Secrets
 
 Ensure the following repository secrets are configured before running the
 pipeline:
 
-- VAULT_ADDR
-- VAULT_ROLE_ID
-- VAULT_SECRET_ID
-- SSH_PUBLIC_KEY
-- TF_REPO_URL (it is as secret for those who potentially inject credentials even
-  though it isn't recommended)
+- `K3S_TOKEN`
+- `SSH_PUBLIC_KEY`
+- `TF_REPO_URL`
 
-### **Triggering a Build**
+### Triggering a Build
 
-1. Go to the **Actions** tab in GitHub.
-2. Select **Build K3s RPi Image**.
-3. Click **Run workflow**.
+1. Go to the Actions tab in GitHub.
+2. Select Build K3s RPi Image.
+3. Click Run workflow.
 4. Input the node's specific variables:
-   - **Node Role:** master-init (first node), master-join (additional masters),
-     or worker.
-   - **Node Hostname:** e.g., k3s-worker-01.
-   - **Node IP:** The static IP for this specific hardware.
-   - **VIP IP:** The kube-vip floating IP for the control plane.
+   - Node Role: `master-init` (first node), `master-join` (additional masters),
+     or `worker`.
+   - Node Hostname: e.g., `k3s-worker-01`.
+   - Node IP: The static IP for this specific hardware.
+   - VIP IP: The kube-vip floating IP for the control plane.
+
 5. Once the build completes, download the generated .img.xz artifact.
 
-## **💾 Flashing & Booting**
+## 💾 Flashing & Booting Note: This setup is designed to boot natively from an SSD
 
-1. Download the generated .img.xz artifact from your GitHub Action run (or your
-   local workspace/ folder).
-2. Flash the image directly to your MicroSD card using the
-   [Raspberry Pi Imager](https://www.raspberrypi.com/software/) or other tools.
-3. _(Optional but Recommended)_ Plug a blank USB 3.0 SATA SSD into the Raspberry
-   Pi. The setup for which this repo is build uses this
-   [adapter](https://www.amazon.de/dp/B011M8YACM?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1)
-4. Insert the SD card, plug in Ethernet, and power on the Pi.
+_No MicroSD card is required. If using older Raspberry Pi 4 models, ensure you
+have updated the EEPROM to enable USB boot first._
+
+1. Download the generated `.img.xz` artifact from your GitHub Action run (or
+   your local `workspace/` folder).
+2. Flash the image directly to your USB 3.0 SATA SSD using the
+   [Raspberry Pi Imager](https://www.raspberrypi.com/software/). The setup for
+   which this repo is built uses this
+   [adapter](https://www.amazon.de/dp/B011M8YACM?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1).
+3. Ensure no SD card is in the Pi, and plug the SSD into the blue USB 3.0 port.
+4. Plug in the Ethernet cable, and power on the Pi.
 5. The Pi will automatically:
+   - Expand the root filesystem to utilize the entire SSD.
    - Set its static IP.
-   - Format and mount the SSD (if present).
-   - Authenticate with Vault.
-   - Install K3s and ArgoCD.
-   - Join the cluster.
+   - Install K3s (adding `--tls-san` for HA).
+   - Deploy `kube-vip` for the floating IP.
+   - Install ArgoCD and join the GitOps cluster.
 
 ## **📄 License**
 

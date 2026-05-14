@@ -71,24 +71,24 @@ runcmd:
   # auto deploy manifests
   - |
     if [ "${NODE_ROLE}" = "master-init" ]; then
-      echo "Setting up ArgoCD GitOps manifests..."
+      echo "Setting up ArgoCD and Kube-VIP auto-deploy manifests..."
       mkdir -p /var/lib/rancher/k3s/server/manifests/
       cp /boot/firmware/k3s-manifests/argocd-helm.yaml /var/lib/rancher/k3s/server/manifests/
       cp /boot/firmware/k3s-manifests/argocd-app.yaml /var/lib/rancher/k3s/server/manifests/
-      # cp /boot/firmware/k3s-manifests/kube-vip-daemonset.yaml /var/lib/rancher/k3s/server/manifests/
+      cp /boot/firmware/k3s-manifests/kube-vip-daemonset.yaml /var/lib/rancher/k3s/server/manifests/
     fi
 
   # install k3s
   - |
     if [ "${NODE_ROLE}" = "master-init" ]; then
       echo "Initializing new HA control plane..."
-      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - server --cluster-init
+      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - server --cluster-init --tls-san ${VIP_IP}
     elif [ "${NODE_ROLE}" = "master-join" ]; then
       echo "Joining existing HA control plane..."
-      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - server --server https://${MASTER_IP}:6443
+      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - server --server https://${VIP_IP}:6443
     elif [ "${NODE_ROLE}" = "worker" ]; then
       echo "Joining as worker node..."
-      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - agent --server https://${MASTER_IP}:6443
+      curl -sfL https://get.k3s.io | K3S_TOKEN=$K3S_TOKEN sh -s - agent --server https://${VIP_IP}:6443
     else
       echo "ERROR: Unknown NODE_ROLE ${NODE_ROLE}"
       exit 1

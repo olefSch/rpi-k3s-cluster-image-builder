@@ -9,7 +9,7 @@ lint:
 clean:
     @echo "Lets clean it up!! :)"
     rm -rf workspace/
-    rm -rf cloud-init/network-config.yaml
+    rm -rf cloud-init/network-config
     rm -rf cloud-init/user-data
     rm -rf manifests/argocd-app.yaml
     rm -rf manifests/kube-vip-daemonset.yaml
@@ -25,7 +25,7 @@ build-locally:
         bash -c "apt-get update && apt-get install -y sudo curl xz-utils kpartx gettext-base \
         && echo 'Injecting secrets via envsubst...' \
         && envsubst < cloud-init/user-data.yaml.tftpl > cloud-init/user-data \
-        && envsubst < cloud-init/network-config.yaml.tftpl > cloud-init/network-config.yaml \
+        && envsubst < cloud-init/network-config.yaml.tftpl > cloud-init/network-config \
         && envsubst < manifests/argocd-app.yaml.tftpl > manifests/argocd-app.yaml \
         && envsubst < manifests/kube-vip-daemonset.yaml.tftpl > manifests/kube-vip-daemonset.yaml \
         && echo 'Running build script...' \

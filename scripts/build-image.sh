@@ -49,7 +49,7 @@ sudo sed -i 's/$/ cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1/' "$
 
 echo "Injecting cloud-init files..."
 sudo cp cloud-init/user-data "$MOUNT_DIR/user-data"
-sudo cp cloud-init/network-config.yaml "$MOUNT_DIR/network-config"
+sudo cp cloud-init/network-config "$MOUNT_DIR/network-config"
 
 echo "Staging auto-deploy manifests..."
 sudo mkdir -p "$MOUNT_DIR/k3s-manifests"

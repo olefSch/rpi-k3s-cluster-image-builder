@@ -10,39 +10,6 @@ users:
       - ${SSH_PUBLIC_KEY}
 
 runcmd:
-  # dependencies
-  - |
-    apt-get update && apt-get install -y parted
-
-  # prep ssd
-  - |
-    DISK="/dev/sda"
-    PARTITION="/dev/sda1"
-    MOUNT_POINT="/var/lib/rancher/k3s"
-
-    echo "Checking for SSD at $DISK..."
-    if lsblk $DISK >/dev/null 2>&1; then
-      if ! blkid $PARTITION >/dev/null 2>&1; then
-        echo "No filesystem found on $PARTITION. Wiping and formatting..."
-        wipefs -a $DISK
-        parted -s $DISK mklabel gpt
-        parted -s $DISK mkpart primary ext4 0% 100%
-        sleep 3
-        mkfs.ext4 -F -L K3SDATA $PARTITION
-      else
-        echo "Filesystem already exists on $PARTITION. Skipping format."
-      fi
-
-      echo "Mounting SSD to $MOUNT_POINT..."
-      mkdir -p $MOUNT_POINT
-      if ! grep -q "$MOUNT_POINT" /etc/fstab; then
-        echo "LABEL=K3SDATA $MOUNT_POINT ext4 defaults,noatime 0 2" >> /etc/fstab
-      fi
-      mount -a
-    else
-      echo "WARNING: No SSD detected at $DISK. K3s will use the SD card."
-    fi
-
   # auto deploy manifests
   - |
     if [ "${NODE_ROLE}" = "master-init" ]; then

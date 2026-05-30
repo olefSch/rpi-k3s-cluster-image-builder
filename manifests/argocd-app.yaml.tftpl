@@ -8,12 +8,12 @@ metadata:
 spec:
   project: default
   source:
-    repoURL: ${TF_REPO_URL}
+    repoURL: ${GIT_REPO_URL}  # for me https://github.com/olefSch/homelab.git
     targetRevision: HEAD
-    path: platform
+    path: kubernetes
   destination:
     server: https://kubernetes.default.svc
-    namespace: default
+    namespace: argocd
   syncPolicy:
     automated:
       prune: true

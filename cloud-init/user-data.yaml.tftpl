@@ -23,14 +23,22 @@ runcmd:
   # install k3s
   - |
     if [ "${NODE_ROLE}" = "master-init" ]; then
-      echo "Initializing new HA control plane..."
-      curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - server --cluster-init --tls-san ${VIP_IP}
+      echo "Initializing new HA control plane (without default ingress/LB)..."
+      curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - server \
+        --cluster-init \
+        --tls-san ${VIP_IP} \
+        --disable traefik \
+        --disable servicelb
     elif [ "${NODE_ROLE}" = "master-join" ]; then
-      echo "Joining existing HA control plane..."
-      curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - server --server https://${VIP_IP}:6443
+      echo "Joining existing HA control plane (without default ingress/LB)..."
+      curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - server \
+        --server https://${VIP_IP}:6443 \
+        --disable traefik \
+        --disable servicelb
     elif [ "${NODE_ROLE}" = "worker" ]; then
       echo "Joining as worker node..."
-      curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - agent --server https://${VIP_IP}:6443
+      curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - agent \
+        --server https://${VIP_IP}:6443
     else
       echo "ERROR: Unknown NODE_ROLE ${NODE_ROLE}"
       exit 1

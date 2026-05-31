@@ -13,6 +13,19 @@ users:
       - ${SSH_PUBLIC_KEY}
 
 runcmd:
+  # wait for internet to be sure to avoid failure
+  - |
+    until ping -c1 8.8.8.8 &>/dev/null; do
+      echo "Waiting for internet..."
+      sleep 2
+    done
+
+  - |
+    until timedatectl status | grep -q "System clock synchronized: yes"; do
+      echo "Waiting for time synchronization..."
+      sleep 2
+    done
+
   # auto deploy manifests
   - |
     if [ "${NODE_ROLE}" = "master-init" ]; then

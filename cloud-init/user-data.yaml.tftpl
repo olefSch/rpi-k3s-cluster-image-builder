@@ -2,6 +2,7 @@
 
 hostname: ${NODE_HOSTNAME}
 manage_etc_hosts: true
+ssh_pwauth: false
 
 users:
   - name: pi
@@ -10,7 +11,6 @@ users:
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     ssh_authorized_keys:
       - ${SSH_PUBLIC_KEY}
-    ssh_pwauth: false
 
 runcmd:
   # auto deploy manifests

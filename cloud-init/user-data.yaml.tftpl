@@ -1,3 +1,5 @@
+#cloud-config
+
 hostname: ${NODE_HOSTNAME}
 manage_etc_hosts: true
 
@@ -8,6 +10,7 @@ users:
     sudo: ["ALL=(ALL) NOPASSWD:ALL"]
     ssh_authorized_keys:
       - ${SSH_PUBLIC_KEY}
+    ssh_pwauth: false
 
 runcmd:
   # auto deploy manifests
@@ -23,14 +26,14 @@ runcmd:
   # install k3s
   - |
     if [ "${NODE_ROLE}" = "master-init" ]; then
-      echo "Initializing new HA control plane (without default ingress/LB)..."
+      echo "Initializing new HA control plane..."
       curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - server \
         --cluster-init \
         --tls-san ${VIP_IP} \
         --disable traefik \
         --disable servicelb
     elif [ "${NODE_ROLE}" = "master-join" ]; then
-      echo "Joining existing HA control plane (without default ingress/LB)..."
+      echo "Joining existing HA control plane..."
       curl -sfL https://get.k3s.io | K3S_TOKEN=${K3S_TOKEN} sh -s - server \
         --server https://${VIP_IP}:6443 \
         --disable traefik \

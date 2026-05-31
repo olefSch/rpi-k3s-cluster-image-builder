@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-UBUNTU_URL="https://cdimage.ubuntu.com/releases/24.04/release/ubuntu-24.04.4-preinstalled-server-arm64+raspi.img.xz"
+UBUNTU_URL="https://cdimage.ubuntu.com/releases/26.04/release/ubuntu-26.04-preinstalled-server-arm64+raspi.img.xz"
 WORKSPACE="workspace"
 IMG_NAME="ubuntu-custom.img"
 IMG_PATH="$WORKSPACE/$IMG_NAME"
@@ -43,9 +43,6 @@ sudo kpartx -av "$LOOP_DEV"
 sleep 2
 
 sudo mount "/dev/mapper/${LOOP_NAME}p1" "$MOUNT_DIR"
-
-echo "Injecting cgroups kernel parameters for Kubernetes..."
-sudo sed -i 's/$/ cgroup_enable=cpuset cgroup_enable=memory cgroup_memory=1/' "$MOUNT_DIR/cmdline.txt"
 
 echo "Injecting cloud-init files..."
 sudo cp cloud-init/user-data "$MOUNT_DIR/user-data"

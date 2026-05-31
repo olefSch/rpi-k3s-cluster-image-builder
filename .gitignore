@@ -10,6 +10,7 @@ workspace/
 # generated files
 cloud-init/network-config.yaml
 cloud-init/user-data
+cloud-init/network-config
 manifests/argocd-app.yaml
 manifests/kube-vip-daemonset.yaml
 

@@ -7,7 +7,7 @@ production-ready Kubernetes edge nodes on Raspberry Pi hardware._
 
 </div>
 
-## 🛠️ Build with
+## 🛠️ Built with
 
 ![Docker](https://img.shields.io/badge/docker-%230db7ed.svg?style=for-the-badge&logo=docker&logoColor=white)
 ![K3S](https://img.shields.io/badge/-K3s-FFC61C?style=for-the-badge&logo=k3s&logoColor=white)
@@ -51,7 +51,7 @@ cluster.**
 
 | Component       | Technology         | Description                                          |
 | :-------------- | :----------------- | :--------------------------------------------------- |
-| **Base OS**     | Ubuntu 24.04 LTS   | Preinstalled ARM64 Server Image for Raspberry Pi     |
+| **Base OS**     | Ubuntu 26.04 LTS   | Preinstalled ARM64 Server Image for Raspberry Pi     |
 | **Kubernetes**  | K3s                | Lightweight, edge-optimized Kubernetes               |
 | **Secrets**     | Build-Time Env     | Direct `K3S_TOKEN` injection for offline clustering  |
 | **GitOps**      | ArgoCD             | App-of-Apps cluster workload bootstrapping           |
@@ -95,10 +95,11 @@ Create a .env file in the root of the repository (this is .gitignore'd for
 security) to simulate the GitHub Actions inputs:
 
 ```
-NODE_ROLE=master-init
-NODE_HOSTNAME=k3s-master-01
-NODE_IP=192.168.1.100
-VIP_IP=192.168.1.99
+NODE_ROLE=worker
+NODE_HOSTNAME=node4
+NODE_IP=192.168.0.24
+VIP_IP=192.168.0.20
+ROUTER_GATEWAY_IP=192.168.0.1
 K3S_TOKEN=your-secure-k3s-cluster-token
 SSH_PUBLIC_KEY=ssh-ed25519 AAAAC3... user@local
 TF_REPO_URL=https://github.com/your-org/your-gitops-repo.git
@@ -158,7 +159,7 @@ have updated the EEPROM to enable USB boot first._
 2. Flash the image directly to your USB 3.0 SATA SSD using the
    [Raspberry Pi Imager](https://www.raspberrypi.com/software/). The setup for
    which this repo is built uses this
-   [adapter](https://www.amazon.de/dp/B011M8YACM?ref=ppx_yo2ov_dt_b_fed_asin_title&th=1).
+   [adapter](https://www.amazon.de/dp/B00XLAZODE).
 3. Ensure no SD card is in the Pi, and plug the SSD into the blue USB 3.0 port.
 4. Plug in the Ethernet cable, and power on the Pi.
 5. The Pi will automatically:
@@ -170,5 +171,5 @@ have updated the EEPROM to enable USB boot first._
 
 ## **📄 License**
 
-This project is licensed under the MIT License. See the
-[LICENSE](https://www.google.com/search?q=LICENSE) file for details.
+This project is licensed under the MIT License. See the [LICENSE](./LICENSE)
+file for details.

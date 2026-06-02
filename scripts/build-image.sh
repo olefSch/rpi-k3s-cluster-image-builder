@@ -44,6 +44,9 @@ sleep 2
 
 sudo mount "/dev/mapper/${LOOP_NAME}p1" "$MOUNT_DIR"
 
+echo "Injecting SSD/USB boot fixes..."
+echo "usb_max_current_enable=1" | sudo tee -a "$MOUNT_DIR/config.txt" >/dev/null
+
 echo "Injecting cloud-init files..."
 sudo cp cloud-init/user-data "$MOUNT_DIR/user-data"
 sudo cp cloud-init/network-config "$MOUNT_DIR/network-config"
